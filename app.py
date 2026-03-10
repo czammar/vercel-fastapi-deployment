@@ -1,22 +1,15 @@
 import os
 import pickle
 from typing import Any
-import numpy as np
-from transformers import pipeline
-from pydantic import BaseModel
-from typing import List
 
+import numpy as np
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from sklearn import datasets
 from sklearn.linear_model import LogisticRegression
 
 
-
 # Pydantic Schemas
-class TextData(BaseModel):
-    texts: List[str]
-
 class PredictionRequest(BaseModel):
     """
     Input schema for diabetes classification.
@@ -83,7 +76,6 @@ def train_model() -> None:
 # Load model once at startup
 model = train_model()
 
-sentiment_pipeline = pipeline("sentiment-analysis")
 
 # FastAPI Application
 app: FastAPI = FastAPI(
@@ -91,10 +83,6 @@ app: FastAPI = FastAPI(
     description="Binary classification API for predicting diabetes.",
     version="1.0.0",
 )
-
-@app.get("/")
-def root():
-    return {"message": "Welcome to the root route!"}
 
 @app.get("/isAlive", response_model=HealthResponse)
 def is_alive() -> HealthResponse:
@@ -122,8 +110,3 @@ def predict(request: PredictionRequest) -> PredictionResponse:
         prediction=prediction,
         probability=probability
     )
-
-@app.post("/analyze/")
-def analyze_sentiment(data: TextData):
-    results = sentiment_pipeline(data.texts)
-    return {"results": results}
