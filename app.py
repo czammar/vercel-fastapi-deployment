@@ -1,24 +1,132 @@
+import os
+import pickle
+from typing import Any
+
+import numpy as np
 from fastapi import FastAPI
-from transformers import pipeline
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, Field
+from sklearn import datasets
+from sklearn.linear_model import LogisticRegression
 
-app = FastAPI()
 
-sentiment_pipeline = pipeline("sentiment-analysis")
+# Pydantic Schemas
+class PredictionRequest(BaseModel):
+    """
+    Input schema for diabetes classification.
 
-# Schema for Text Data
-class TextData(BaseModel):
-    texts: List[str]
+    Attributes
+    ----------
+    age : float
+    bmi : float
+    bp : float
+    s1 : float
+    """
+    age: float = Field(..., description="Age feature")
+    bmi: float = Field(..., description="Body Mass Index feature")
+    bp: float = Field(..., description="Average blood pressure feature")
+    s1: float = Field(..., description="Total serum cholesterol feature")
 
-# Root path
-@app.get("/")
-def root():
-    return {"message": "Análisis de Sentimiento API activa"}
 
-# Ruta para analizar sentimientos (POST es mejor para enviar datos)
-@app.post("/analyze/")
-def analyze_sentiment(data: TextData):
-    # 'data.texts' vendrá del cuerpo del JSON que envíes
-    results = sentiment_pipeline(data.texts)
-    return {"results": results}
+class PredictionResponse(BaseModel):
+    """
+    Output schema for diabetes classification.
+
+    Attributes
+    ----------
+    prediction : int
+        1 = Has diabetes
+        0 = No diabetes
+    probability : float
+        Probability of having diabetes
+    """
+    prediction: int
+    probability: float
+
+
+class HealthResponse(BaseModel):
+    """
+    Health check response schema.
+    """
+    status: str
+
+
+
+# Model Configuration
+MODEL_PATH: str = "diabetes_classifier.pkl"
+
+
+def train_and_save_model(path: str) -> None:
+    """
+    Train a logistic regression classifier using 4 features
+    from sklearn diabetes dataset.
+
+    Converts regression target into binary classification
+    using median threshold.
+    """
+    diabetes = datasets.load_diabetes()
+
+    # Select 4 features: age(0), bmi(2), bp(3), s1(4)
+    X: np.ndarray = diabetes.data[:, [0, 2, 3, 4]]
+
+    # Convert continuous target into binary
+    y_continuous: np.ndarray = diabetes.target
+    threshold: float = np.median(y_continuous)
+    y: np.ndarray = (y_continuous > threshold).astype(int)
+
+    model = LogisticRegression(max_iter=1000)
+    model.fit(X, y)
+
+    with open(path, "wb") as f:
+        pickle.dump(model, f)
+
+
+def load_model(path: str) -> Any:
+    """
+    Load trained model from disk.
+    """
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        train_and_save_model(path)
+
+    with open(path, "rb") as f:
+        return pickle.load(f)
+
+
+# Load model once at startup
+model = load_model(MODEL_PATH)
+
+
+
+# FastAPI Application
+app: FastAPI = FastAPI(
+    title="Diabetes Classification API",
+    description="Binary classification API for predicting diabetes.",
+    version="1.0.0",
+)
+
+
+@app.get("/isAlive", response_model=HealthResponse)
+def is_alive() -> HealthResponse:
+    """
+    Health check endpoint.
+    """
+    return HealthResponse(status="true")
+
+
+@app.post("/prediction/", response_model=PredictionResponse)
+def predict(request: PredictionRequest) -> PredictionResponse:
+    """
+    Predict whether a patient has diabetes.
+
+    Returns:
+        prediction: 0 or 1
+        probability: probability of class 1
+    """
+    features = np.array([[request.age, request.bmi, request.bp, request.s1]])
+
+    prediction: int = int(model.predict(features)[0])
+    probability: float = float(model.predict_proba(features)[0][1])
+
+    return PredictionResponse(
+        prediction=prediction,
+        probability=probability
+    )
