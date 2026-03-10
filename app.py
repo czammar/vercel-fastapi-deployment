@@ -5,6 +5,8 @@ from typing import List
 
 app = FastAPI()
 
+sentiment_pipeline = pipeline("sentiment-analysis")
+
 # Schema for Text Data
 class TextData(BaseModel):
     texts: List[str]
