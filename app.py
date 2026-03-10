@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from sklearn import datasets
 from sklearn.linear_model import LogisticRegression
-
+ 
 
 # Pydantic Schemas
 class PredictionRequest(BaseModel):
