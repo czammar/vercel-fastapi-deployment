@@ -1,18 +1,22 @@
 from fastapi import FastAPI
+from transformers import pipeline
+from pydantic import BaseModel
+from typing import List
 
 app = FastAPI()
 
-# Root route
+# Schema for Text Data
+class TextData(BaseModel):
+    texts: List[str]
+
+# Root path
 @app.get("/")
 def root():
-    return {"message": "Welcome to the root route!"}
+    return {"message": "Análisis de Sentimiento API activa"}
 
-# Route to display info for items
-@app.get("/items/")
-def items():
-    return {"message": "Welcome to the items route!"}
-
-# Route to display info for updating items
-@app.get("/items/update/")
-def update_item():
-    return {"message": "Welcome to the update item route!"}
+# Ruta para analizar sentimientos (POST es mejor para enviar datos)
+@app.post("/analyze/")
+def analyze_sentiment(data: TextData):
+    # 'data.texts' vendrá del cuerpo del JSON que envíes
+    results = sentiment_pipeline(data.texts)
+    return {"results": results}
