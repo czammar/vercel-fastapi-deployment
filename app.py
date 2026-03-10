@@ -50,12 +50,7 @@ class HealthResponse(BaseModel):
     status: str
 
 
-
-# Model Configuration
-MODEL_PATH: str = "diabetes_classifier.pkl"
-
-
-def train_and_save_model(path: str) -> None:
+def train_model() -> None:
     """
     Train a logistic regression classifier using 4 features
     from sklearn diabetes dataset.
@@ -76,24 +71,10 @@ def train_and_save_model(path: str) -> None:
     model = LogisticRegression(max_iter=1000)
     model.fit(X, y)
 
-    with open(path, "wb") as f:
-        pickle.dump(model, f)
-
-
-def load_model(path: str) -> Any:
-    """
-    Load trained model from disk.
-    """
-    if not os.path.exists(path) or os.path.getsize(path) == 0:
-        train_and_save_model(path)
-
-    with open(path, "rb") as f:
-        return pickle.load(f)
-
+    return model
 
 # Load model once at startup
-model = load_model(MODEL_PATH)
-
+model = train_model()
 
 
 # FastAPI Application
@@ -102,7 +83,6 @@ app: FastAPI = FastAPI(
     description="Binary classification API for predicting diabetes.",
     version="1.0.0",
 )
-
 
 @app.get("/isAlive", response_model=HealthResponse)
 def is_alive() -> HealthResponse:
