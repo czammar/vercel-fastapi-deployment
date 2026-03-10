@@ -84,6 +84,10 @@ app: FastAPI = FastAPI(
     version="1.0.0",
 )
 
+@app.get("/")
+def root():
+    return {"message": "Bienvenidos alumnos de Tecmilenio!"}
+
 @app.get("/isAlive", response_model=HealthResponse)
 def is_alive() -> HealthResponse:
     """
