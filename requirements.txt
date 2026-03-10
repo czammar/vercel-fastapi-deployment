@@ -1,4 +1,7 @@
 fastapi
 pydantic
 scikit-learn
-uvicorn 
+uvicorn
+torch
+transformers[torch]
+numpy<2
